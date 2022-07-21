@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: ${{ env.SRC_DIR }}
+          submodules: "recursive"
 
       # build
       - name: build
@@ -45,7 +46,7 @@ jobs:
 
     env:
       # GitHub personal account token secret to push to repository
-      TOKEN: ${{ secrets.ZOLA_IMAGE_BUILDER_TOKEN }}
+      TOKEN: ${{ github.token }}
       GH_PAGES_DIR: ${{ github.workspace }}/gh-pages
 
 

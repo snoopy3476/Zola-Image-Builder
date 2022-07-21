@@ -97,12 +97,6 @@
   - `GitHub Pages`
     (using GitHub Actions file: `.github/workflows/deploy-pages-zola.yml`)
     - Required configuration
-      - Add a token & secret (to push built result to the branch *`gh-pages`*)
-        - Add [Personal access token](https://docs.github.com/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
-          for your account, with selecting scope *`repo`*
-        - [Create a new repository actions secret](https://docs.github.com/actions/security-guides/encrypted-secrets#creating-encrypted-secrets-for-a-repository)
-          - Name: `ZOLA_IMAGE_BUILDER_TOKEN`
-          - Value: personal access token above
       - [Configure GitHub Pages](https://docs.github.com/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
         (to deploy *`gh-pages`* to GitHub Pages)
         - Set source branch to *`gh-pages`*, and directory to `/ (root)`
