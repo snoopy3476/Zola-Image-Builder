@@ -1,0 +1,86 @@
+name: Zola Image Builder
+
+env:
+  SRC_DIR: ${{ github.workspace }}/zola
+
+on: push
+
+jobs:
+
+
+
+  build:
+    name: Build zola to static site
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # checkout source
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.SRC_DIR }}
+
+      # build
+      - name: build
+        working-directory: ${{ env.SRC_DIR }}
+        run: |
+          ./build.sh
+
+      - name: upload built artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pages-artifact
+          path: ${{ env.SRC_DIR }}
+
+
+
+  pages:
+    name: Push zola site to the gh-pages branch
+    runs-on: ubuntu-latest
+    needs: build
+
+    # build & deploy are triggered only on default branch
+    if: github.ref_name == github.event.repository.default_branch
+
+    env:
+      # GitHub personal account token secret to push to repository
+      TOKEN: ${{ secrets.ZOLA_IMAGE_BUILDER_TOKEN }}
+      GH_PAGES_DIR: ${{ github.workspace }}/gh-pages
+
+
+    steps:
+
+      # checkout source for gh-pages branch
+      - name: checkout gh-pages
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.GH_PAGES_DIR }}
+
+      # set git commit config
+      - name: git set config
+        env:
+          USER_NAME: ${{ github.event.pusher.name }}
+          USER_EMAIL: ${{ github.event.pusher.email }}
+        run: |
+          git config --global user.email "$USER_EMAIL"
+          git config --global user.name "$USER_NAME"
+
+      # get built artifact
+      - name: get built artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pages-artifact
+          path: ${{ env.SRC_DIR }}
+
+      # commit built output to gh-pages branch, then push
+      - name: push to gh-pages
+        working-directory: ${{ env.GH_PAGES_DIR }}
+        run: |
+          git switch -c gh-pages
+          rm -rf ./*
+          cp -af "${{ env.SRC_DIR }}"/public/* ./
+          git add .
+          git commit -m "$(git -C "${{ env.SRC_DIR }}" log --format=%B -n 1)"
+          git push -u -f "https://${TOKEN}@github.com/${{ github.repository }}.git" gh-pages
+

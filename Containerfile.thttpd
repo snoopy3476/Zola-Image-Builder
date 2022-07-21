@@ -1,0 +1,25 @@
+### ARGS LIST ###
+# alpine_ver : version of alpine (builder)
+#
+# thttpd_ver : version of thttpd (in alpine)
+# cache_max_age : http cache-control max-age value in seconds (for thttpd)
+#
+
+# Author: Kim Hwiwon <kim.hwiwon@outlook.com>
+# License: The MIT License (MIT)
+
+ARG alpine_ver="latest"
+FROM alpine:${alpine_ver}
+ARG thttpd_ver=""
+RUN [ -n "$thttpd_ver" ] && thttpd_ver="~$thttpd_ver"; \
+    apk add --no-cache thttpd"${thttpd_ver}"
+
+RUN mkdir /public
+COPY public /public
+RUN chown -R thttpd /public
+
+EXPOSE 80
+EXPOSE 443
+
+ARG cache_max_age=600
+CMD ["thttpd", "-D", "-d", "/public", "-u", "thttpd", "-l", "-", "-M", "${cache_max_age}"]

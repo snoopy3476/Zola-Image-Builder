@@ -1,0 +1,42 @@
+image: alpine:latest
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+before_script:
+  - apk add podman
+
+stages:
+  - build
+  - deploy
+
+
+# Build zola
+build:
+  stage: build
+  script:
+    - echo Build Zola...
+    - apk add podman
+    - ./build.sh
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 hour
+
+
+# Deploy to GitLab Pages
+pages:
+  stage: deploy
+
+  # deploy only on default branch
+  only:
+    variables:
+      - $CI_DEFAULT_BRANCH == $CI_COMMIT_REF_NAME
+
+  script:
+    - echo Deploy to GitLab Pages...
+
+  # set Zola built output for GitLab Pages
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 day
