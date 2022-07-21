@@ -28,11 +28,13 @@ jobs:
         run: |
           ./build.sh
 
+      # upload built artifact
       - name: upload built artifact
         uses: actions/upload-artifact@v3
         with:
           name: pages-artifact
-          path: ${{ env.SRC_DIR }}
+          path: ${{ env.SRC_DIR }}/public
+          retention-days: 1
 
 
 
@@ -52,6 +54,13 @@ jobs:
 
 
     steps:
+
+      # checkout source
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.SRC_DIR }}
+          submodules: "recursive"
 
       # checkout source for gh-pages branch
       - name: checkout gh-pages
@@ -78,7 +87,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pages-artifact
-          path: ${{ env.SRC_DIR }}
+          path: ${{ env.SRC_DIR }}/public
 
       # commit built output to gh-pages branch, then push
       - name: push to gh-pages
@@ -87,6 +96,6 @@ jobs:
           cp -af "${{ env.GH_PAGES_DIR }}/.git" ./
           cp -af "${{ env.SRC_DIR }}"/public/* ./
           git add .
-          git commit -m "$(git -C "${{ env.SRC_DIR }}" log --format=%B -n 1)"
+          git commit -m "$(git -C "${{ env.SRC_DIR }}" log --format=%B -n 1)" || true
           git push -u -f "https://${TOKEN}@github.com/${{ github.repository }}.git" gh-pages
 
