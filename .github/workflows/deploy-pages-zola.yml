@@ -61,22 +61,10 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
         with:
-          path: ${{ env.SRC_DIR }}
-          submodules: "recursive"
-
-      # checkout source for gh-pages branch
-      - name: checkout gh-pages
-        uses: actions/checkout@v3
-        with:
           path: ${{ env.GH_PAGES_DIR }}
-          ref: gh-pages
+          submodules: "recursive"
           token: |
             ${{ env.SELF_TOKEN }}
-
-      # make new gh-pages directory
-      - name: directory for new gh-pages
-        run: |
-          mkdir -p "${{ env.NEW_GH_PAGES_DIR }}"
 
       # set git commit config
       - name: git set config
@@ -92,15 +80,28 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: pages-artifact
-          path: ${{ env.SRC_DIR }}/public
+          path: ${{ env.SRC_DIR }}
+
+      # make new gh-pages directory
+      - name: directory for new gh-pages
+        run: |
+          mkdir -p "${{ env.NEW_GH_PAGES_DIR }}"
 
       # commit built output to gh-pages branch, then push
       - name: push to gh-pages
         working-directory: ${{ env.NEW_GH_PAGES_DIR }}
         run: |
+
+          # get last git log, then switch GH_PAGES_DIR to gh-pages
+          LAST_GIT_COMMIT_MSG="$(git -C "${{ env.GH_PAGES_DIR }}" log --format=%B -n 1)"
+          git -C "${{ env.GH_PAGES_DIR }}" switch -c gh-pages
+
+          # init NEW_GH_PAGES_DIR files
           cp -af "${{ env.GH_PAGES_DIR }}/.git" ./
-          cp -af "${{ env.SRC_DIR }}"/public/* ./
+          cp -af "${{ env.SRC_DIR }}"/. ./
+
+          # push newly built gh-pages
           git add .
-          git commit -m "$(git -C "${{ env.SRC_DIR }}" log --format=%B -n 1)" || true
+          git commit -m "$LAST_GIT_COMMIT_MSG" || true
           git push -u -f "https://${SELF_TOKEN}@github.com/${{ github.repository }}.git" gh-pages
 
