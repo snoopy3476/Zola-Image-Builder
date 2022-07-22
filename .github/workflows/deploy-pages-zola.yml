@@ -2,6 +2,7 @@ name: Zola Image Builder
 
 env:
   SRC_DIR: ${{ github.workspace }}/zola
+  SELF_TOKEN: ${{ github.token }}
 
 on: push
 
@@ -21,6 +22,8 @@ jobs:
         with:
           path: ${{ env.SRC_DIR }}
           submodules: "recursive"
+          token: |
+            ${{ env.SELF_TOKEN }}
 
       # build
       - name: build
@@ -48,7 +51,6 @@ jobs:
 
     env:
       # GitHub personal account token secret to push to repository
-      TOKEN: ${{ github.token }}
       GH_PAGES_DIR: ${{ github.workspace }}/gh-pages
       NEW_GH_PAGES_DIR: ${{ github.workspace }}/new-gh-pages
 
@@ -68,7 +70,10 @@ jobs:
         with:
           path: ${{ env.GH_PAGES_DIR }}
           ref: gh-pages
+          token: |
+            ${{ env.SELF_TOKEN }}
 
+      # make new gh-pages directory
       - name: directory for new gh-pages
         run: |
           mkdir -p "${{ env.NEW_GH_PAGES_DIR }}"
@@ -97,5 +102,5 @@ jobs:
           cp -af "${{ env.SRC_DIR }}"/public/* ./
           git add .
           git commit -m "$(git -C "${{ env.SRC_DIR }}" log --format=%B -n 1)" || true
-          git push -u -f "https://${TOKEN}@github.com/${{ github.repository }}.git" gh-pages
+          git push -u -f "https://${SELF_TOKEN}@github.com/${{ github.repository }}.git" gh-pages
 
