@@ -11,12 +11,12 @@
 ARG alpine_ver="latest"
 FROM alpine:${alpine_ver}
 ARG thttpd_ver=""
-RUN [ -n "$thttpd_ver" ] && thttpd_ver="~$thttpd_ver"; \
-    apk add --no-cache thttpd"${thttpd_ver}"
+RUN printf "\n\n * Building Webserver Image (THTTPD)...\n" >&2 ; \
+    apk add --no-cache thttpd"${thttpd_ver:+~$thttpd_ver}" >&2
 
-RUN mkdir /public
+RUN mkdir /public >&2
 COPY public /public
-RUN chown -R thttpd /public
+RUN chown -R thttpd /public >&2
 
 EXPOSE 80
 EXPOSE 443

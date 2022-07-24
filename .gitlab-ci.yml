@@ -1,42 +1,138 @@
-image: alpine:latest
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
+# configurable envs:
 
-before_script:
-  - apk add podman
+# [Build]
+#   ALPINE_VER
+#   ZOLA_VER
+#   ZOLA_BASE_URL
+#   MINIFY_VER
+#   MINIFY_ARGS
+#   NO_MINIFY
+#   GZIP_TARGET_EXTENSIONS
+#   GZIP_COMPRESSION_LEVEL
+
+# [Push] (location: ${REPO_PROTOCOL}://${REPO_ID}${REPO_PW}@${REPO_HOST}/${REPO})
+#   REPO_PROTOCOL
+#   REPO_HOST
+#   REPO
+#   REPO_BRANCH
+#   REPO_ID
+#   REPO_PW
+#   REPO_KEY
+
+
+
+image: alpine:latest
+
+
+
+variables:
+  # global envs
+  GIT_SUBMODULE_STRATEGY: recursive
+  SRC_DIR: $CI_PROJECT_DIR
+  USER_NAME: $GITLAB_USER_NAME
+  USER_EMAIL: $GITLAB_USER_EMAIL
 
 stages:
   - build
   - deploy
 
 
+
 # Build zola
 build:
   stage: build
   script:
-    - echo Build Zola...
     - apk add podman
-    - ./build.sh
+    - rm -rf static/public
+    - ALPINE_VER="${ALPINE_VER}"
+      ZOLA_VER="${ZOLA_VER}"
+      ZOLA_BASE_URL="${ZOLA_BASE_URL}"
+      MINIFY_VER="${MINIFY_VER}"
+      MINIFY_ARGS="${MINIFY_ARGS}"
+      NO_MINIFY="${NO_MINIFY}"
+      GZIP_TARGET_EXTENSIONS="${GZIP_TARGET_EXTENSIONS}"
+      GZIP_COMPRESSION_LEVEL="${GZIP_COMPRESSION_LEVEL}"
+      OUTPUT_DIR="static/public"
+      ./build.sh
   artifacts:
+    name: pages-artifact
     paths:
-      - public
-    expire_in: 1 hour
+      - static/public
+    expire_in: 1 day
+
 
 
 # Deploy to GitLab Pages
 pages:
   stage: deploy
 
-  # deploy only on default branch
-  only:
-    variables:
-      - $CI_DEFAULT_BRANCH == $CI_COMMIT_REF_NAME
+  # deploy only on current repo + default branch
+  rules:
+    - if: $CI_DEFAULT_BRANCH == $CI_COMMIT_REF_NAME
+          && ( $REPO_HOST == null || $REPO_HOST == "" )
+          && ( $REPO == null || $REPO == "" )
 
   script:
-    - echo Deploy to GitLab Pages...
+    - mv static/public ./
 
   # set Zola built output for GitLab Pages
   artifacts:
+    name: tmp-artifact-for-deploy
     paths:
       - public
-    expire_in: 1 day
+    expire_in: 1 sec
+
+
+
+# Push to external repo
+push:
+  stage: deploy
+
+  # only if not current repo
+  rules:
+    - if: $CI_DEFAULT_BRANCH == $CI_COMMIT_REF_NAME
+          && (
+            ( $REPO_HOST != null && $REPO_HOST != "" )
+            || ( $REPO != null && $REPO != "" )
+          )
+
+  script:
+  
+      # init git
+    - apk add git openssh
+    - git config --global user.name "$USER_NAME"
+    - git config --global user.email "$USER_EMAIL"
+
+      # create tmp dir for pages branch
+    - TMP_GIT_DIR="$(mktemp -d)"
+    
+      # clone from target repo
+    - mkdir -p "${SRC_DIR}/static/public"
+    - REPO_PROTOCOL="${REPO_PROTOCOL:-ssh}"
+      REPO_HOST="${REPO_HOST:-${CI_SERVER_HOST}}"
+      REPO="${REPO:-${CI_PROJECT_PATH}}"
+      REPO_ID="${REPO_ID:-git}"
+      REPO_PW="${REPO_ID:+${REPO_PW}}"
+      REPO_KEY="${REPO_KEY}"
+      LOCAL_GIT_TARGET_DIR="${TMP_GIT_DIR}"
+      "${SRC_DIR}"/.ci-scripts/clone-from-repo.sh
+
+      # switch to clean pages branch
+    - REPO_BRANCH="${REPO_BRANCH:-pages}"
+      LOCAL_GIT_TARGET_DIR="${TMP_GIT_DIR}"
+      "${SRC_DIR}"/.ci-scripts/init-clean-branch.sh
+
+      # set built artifact to pages branch
+    - mv "${TMP_GIT_DIR}/.git" "${SRC_DIR}/static/"
+
+      # push to target repo
+    - REPO_PROTOCOL="${REPO_PROTOCOL:-ssh}"
+      REPO_HOST="${REPO_HOST:-${CI_SERVER_HOST}}"
+      REPO="${REPO:-${CI_PROJECT_PATH}}"
+      REPO_BRANCH="${REPO_BRANCH:-pages}"
+      REPO_ID="${REPO_ID:-git}"
+      REPO_PW="${REPO_ID:+${REPO_PW}}"
+      REPO_KEY="${REPO_KEY}"
+      LOCAL_GIT_TARGET_DIR="${SRC_DIR}/static"
+      LOCAL_GIT_NEW_COMMIT_MSG="${CI_COMMIT_MESSAGE}"
+      "${SRC_DIR}"/.ci-scripts/push-changes-to-repo.sh

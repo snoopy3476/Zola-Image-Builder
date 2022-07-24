@@ -14,7 +14,9 @@
 #           MINIFY_ARGS : additional arguments of minify
 #           NO_MINIFY : do not perform any minify if env is set
 #
-#           GZIP_TARGET_EXTENSIONS : file extensions list to compress with gzip, separated with space
+#           GZIP_TARGET_EXTENSIONS : file extensions list to compress with gzip,
+#                                    separated with space.
+#                                    set to a single space (' ') to disable gzip compression
 #           GZIP_COMPRESSION_LEVEL : compression level of gzip
 #
 # example: $ ./build.sh
@@ -49,9 +51,9 @@ ZOLA_DIR="${1:-$(dirname ./*/config.toml | head -n1 2> /dev/null)}"
 
 
 
-IMG_NAME=zola-img-builder
+IMG_NAME=zola-pages-builder
 IMG_TAG="$(tr -dc '[:alpha:]' < /dev/urandom | head -c30)"
-OUTPUT_DIR=public
+OUTPUT_DIR="${OUTPUT_DIR:-public}"
 
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
@@ -61,18 +63,18 @@ if iid=$("$CONTAINER_BINNAME" \
            -f Containerfile \
            --rm -q -t "$IMG_NAME":"$IMG_TAG" \
            \
-           ${ALPINE_VER:+"--build-arg=alpine_ver='$ALPINE_VER'"} \
+           ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
            \
-           ${ZOLA_VER:+"--build-arg=zola_ver='$ZOLA_VER'"} \
+           ${ZOLA_VER:+--build-arg=zola_ver="$ZOLA_VER"} \
            --build-arg=zola_dir="$ZOLA_DIR" \
-           ${ZOLA_BASE_URL:+"--build-arg=zola_base_url='$ZOLA_BASE_URL'"} \
+           ${ZOLA_BASE_URL:+--build-arg=zola_base_url="$ZOLA_BASE_URL"} \
            \
            --build-arg=minify_ver="$MINIFY_VER" \
-           ${MINIFY_ARGS:+"--build-arg=minify_args='$MINIFY_ARGS'"} \
-           ${NO_MINIFY:+"--build-arg=no_minify='$NO_MINIFY'"} \
+           ${MINIFY_ARGS:+--build-arg=minify_args="$MINIFY_ARGS"} \
+           ${NO_MINIFY:+--build-arg=no_minify="$NO_MINIFY"} \
            \
-           ${GZIP_TARGET_EXTENSIONS:+"--build-arg=gzip_target_extensions='$GZIP_TARGET_EXTENSIONS'"} \
-           ${GZIP_COMPRESSION_LEVEL:+"--build-arg=gzip_compression_level='$GZIP_COMPRESSION_LEVEL'"} \
+           ${GZIP_TARGET_EXTENSIONS:+--build-arg=gzip_target_extensions="$GZIP_TARGET_EXTENSIONS"} \
+           ${GZIP_COMPRESSION_LEVEL:+--build-arg=gzip_compression_level="$GZIP_COMPRESSION_LEVEL"} \
       ) \
     && cid=$("$CONTAINER_BINNAME" create "$IMG_NAME":"$IMG_TAG") \
     && "$CONTAINER_BINNAME" cp "$cid":/public/. "$OUTPUT_DIR"
@@ -84,7 +86,9 @@ if [ -n "$iid" ]; then "$CONTAINER_BINNAME" rmi -f "$iid" > /dev/null; fi
 
 if $success
 then
-  printf "Zola build success: Outputs are stored at path: '%s'\n" "$OUTPUT_DIR" >&2; return 0
+  printf "Zola build success: Outputs are stored at path: '%s'\n" "$OUTPUT_DIR" >&2
+  exit 0
 else
-  printf "Zola build FAILED!\n" >&2; return 1
+  printf "Zola build FAILED!\n" >&2
+  exit 1
 fi

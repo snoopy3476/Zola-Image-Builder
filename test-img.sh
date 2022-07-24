@@ -14,7 +14,9 @@
 #           MINIFY_ARGS : additional arguments of minify
 #           NO_MINIFY : do not perform any minify if env is set
 #
-#           GZIP_TARGET_EXTENSIONS : file extensions list to compress with gzip, separated with space
+#           GZIP_TARGET_EXTENSIONS : file extensions list to compress with gzip,
+#                                    separated with space.
+#                                    set to a single space (' ') to disable gzip compression
 #           GZIP_COMPRESSION_LEVEL : compression level of gzip
 #
 #           THTTPD_VER : thttpd (webserver) version
@@ -42,13 +44,14 @@ fi
 
 
 
-IMG_NAME=zola-testimg-builder
+IMG_NAME=zola-pages-builder-imgtest
 IMG_TAG="$(tr -dc '[:alpha:]' < /dev/urandom | head -c30)"
 
 SIG_LIST="INT HUP QUIT ABRT TERM"
 trap "" $SIG_LIST
-iid=$(./img-build.sh "$IMG_NAME":"$IMG_TAG" "$@") \
-  && printf "Running built image... (http://localhost:%s)\n" "${EXTERNAL_PORT:-8000}" \
+iid=$(./img-build.sh "$IMG_NAME":"$IMG_TAG" "$1") \
+  && printf "\n\n * Running built image... (http://localhost:%s)\n   Press Ctrl+C to stop.\n" \
+            "${EXTERNAL_PORT:-8000}" \
   && "$CONTAINER_BINNAME" run --rm -p "${EXTERNAL_PORT:-8000}":80 "$iid"
 trap - $SIG_LIST
 
@@ -56,5 +59,6 @@ trap - $SIG_LIST
 
 if [ -n "$iid" ]
 then
-  "$CONTAINER_BINNAME" rmi -f "$IMG_NAME":"$IMG_TAG" > /dev/null && printf "\nTest image removed.\n";
+  "$CONTAINER_BINNAME" rmi -f "$IMG_NAME":"$IMG_TAG" > /dev/null \
+    && printf "\n\n * Test image removed.\n";
 fi

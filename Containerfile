@@ -31,11 +31,9 @@ ARG zola_base_url=""
 COPY "${zola_dir}" /zola
 WORKDIR /zola
 
-RUN [ -n "$zola_ver" ] && zola_ver="~$zola_ver"; \
-    apk add zola"${zola_ver}"
-
-RUN [ -z "$zola_base_url" ] && zola build -o /public >&2
-RUN [ -z "$zola_base_url" ] || zola build -o /public -u "$zola_base_url" >&2
+RUN apk add zola"${zola_ver:+~$zola_ver}" >&2
+RUN printf "\n\n * Building Zola...\n" >&2 ; \
+    zola build -o /public ${zola_base_url:+-u} ${zola_base_url:+"$zola_base_url"} >&2
 
 
 
@@ -44,9 +42,14 @@ ARG minify_ver=""
 ARG minify_args=""
 ARG no_minify=""
 
-RUN [ -n "$minify_ver" ] && minify_ver="~$minify_ver"; \
-    [ -z "$no_minify" ] && apk add minify"${minify_ver}" && minify -r /public -o ./ $minify_args
-RUN [ -z "$no_minify" ] || echo "No minify flag set!"
+RUN if [ -z "$no_minify" ]; \
+    then \
+        printf "\n\n * Minifying outputs...\n" >&2 ; \
+        apk add minify"${minify_ver:+~$minify_ver}" >&2 \
+          && minify -r /public -o / $minify_args >&2 \
+        || exit 1; \
+    fi
+RUN [ -z "$no_minify" ] || printf "\n\n * Minification is disabled by user!\n" >&2
 
 
 
@@ -64,6 +67,11 @@ RUN find_pattern_str=""; \
         find_pattern_str="$find_pattern_str""-name *.""$ext"; \
     done; \
     \
-    find /public \
-    \( $find_pattern_str \) \
-    -exec gzip -kf "-${gzip_compression_level}" {} + ;
+    if [ -n "$find_pattern_str" ]; \
+    then \
+        printf "\n\n * Gzip compressing outputs: %s\n" "$gzip_target_extensions" >&2 ; \
+        find /public \( $find_pattern_str \) \
+          -exec gzip -kf "-${gzip_compression_level}" {} + >&2 || exit 1 ; \
+    else \
+        printf "\n\n * Gzip compression is disabled by user!\n" >&2 ; \
+    fi
