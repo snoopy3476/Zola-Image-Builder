@@ -10,21 +10,12 @@
 #           ZOLA_VER : version of zola (in alpine)
 #           ZOLA_BASE_URL : base_url for zola to override default in comfig.toml
 #
-#           MINIFY_VER : version of minify (in alpine)
-#           MINIFY_ARGS : additional arguments of minify
-#           NO_MINIFY : do not perform any minify if env is set
-#
-#           GZIP_TARGET_EXTENSIONS : file extensions list to compress with gzip,
-#                                    separated with space.
-#                                    set to a single space (' ') to disable gzip compression
-#           GZIP_COMPRESSION_LEVEL : compression level of gzip
-#
 #           THTTPD_VER : thttpd (webserver) version
 #           CACHE_MAX_AGE : http cache-control max-age value in seconds (for thttpd)
 #
 # example: $ ./img-build.sh my-container-img-name
 #          $ ./img-build.sh my-container-img-name root-zola-dir
-#          $ ZOLA_VER=0.15.3 NO_MINIFY=1 CACHE_MAX_AGE=3600 ./img-build.sh my-container-img-name
+#          $ ZOLA_VER=0.16.0 CACHE_MAX_AGE=3600 ./img-build.sh my-container-img-name
 
 
 
@@ -45,30 +36,35 @@ fi
 IMG_NAME="${1?Image name to build not given!
 usage: ${0} <img-name> [zola-dir]}"
 shift
+TMP_DIR="$(mktemp -d)"
 
 
 
-if ./build.sh "$1" \
-    && iid=$( if [ -z "$IMG_NAME" ]
-              then
-                "$CONTAINER_BINNAME" \
-                  build . \
-                  -f Containerfile.thttpd \
-                  --rm -q \
-                  ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
-                  ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
-                  ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"}
-              else
-                "$CONTAINER_BINNAME" \
-                  build . \
-                  -t "$IMG_NAME" \
-                  -f Containerfile.thttpd \
-                  --rm -q \
-                  ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
-                  ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
-                  ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"}
-              fi )
+if OUTPUT_DIR="$TMP_DIR" ./build.sh "$1" \
+    && printf "\n * Building Webserver Image (THTTPD)...\n" >&2 \
+     && iid=$( if [ -z "$IMG_NAME" ]
+               then
+                 "$CONTAINER_BINNAME" \
+                   build . \
+                   -f Containerfile \
+                   --rm -q \
+                   --build-arg=input_dir="$TMP_DIR" \
+                   ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
+                   ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
+                   ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"}
+               else
+                 "$CONTAINER_BINNAME" \
+                   build . \
+                   -f Containerfile \
+                   -t "$IMG_NAME" \
+                   --rm -q \
+                   --build-arg=input_dir="$TMP_DIR" \
+                   ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
+                   ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
+                   ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"}
+               fi )
 then success=true; else success=false; fi
+rm -rf "$TMP_DIR"
 
 printf "%s\n" "$iid"
 

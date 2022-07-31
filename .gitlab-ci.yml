@@ -42,8 +42,8 @@ stages:
 build:
   stage: build
   script:
-    - apk add podman
-    - rm -rf static/public
+    - apk add podman git coreutils
+    - rm -rf static/docs
     - ALPINE_VER="${ALPINE_VER}"
       ZOLA_VER="${ZOLA_VER}"
       ZOLA_BASE_URL="${ZOLA_BASE_URL}"
@@ -52,12 +52,12 @@ build:
       NO_MINIFY="${NO_MINIFY}"
       GZIP_TARGET_EXTENSIONS="${GZIP_TARGET_EXTENSIONS}"
       GZIP_COMPRESSION_LEVEL="${GZIP_COMPRESSION_LEVEL}"
-      OUTPUT_DIR="static/public"
+      OUTPUT_DIR="static/docs"
       ./build.sh
   artifacts:
     name: pages-artifact
     paths:
-      - static/public
+      - static/docs
     expire_in: 1 day
 
 
@@ -73,14 +73,15 @@ pages:
           && ( $REPO == null || $REPO == "" )
 
   script:
-    - mv static/public ./
+    - rm -rf public
+    - mv static/docs public
 
   # set Zola built output for GitLab Pages
   artifacts:
     name: tmp-artifact-for-deploy
     paths:
       - public
-    expire_in: 1 sec
+    expire_in: 1 hour
 
 
 
@@ -107,7 +108,7 @@ push:
     - TMP_GIT_DIR="$(mktemp -d)"
     
       # clone from target repo
-    - mkdir -p "${SRC_DIR}/static/public"
+    - mkdir -p "${SRC_DIR}/static/docs"
     - REPO_PROTOCOL="${REPO_PROTOCOL:-ssh}"
       REPO_HOST="${REPO_HOST:-${CI_SERVER_HOST}}"
       REPO="${REPO:-${CI_PROJECT_PATH}}"

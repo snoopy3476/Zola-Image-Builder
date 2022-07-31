@@ -8,7 +8,8 @@ pages:
   stage: deploy
   
   script:
-    - echo Deploy to GitLab Pages
+    - rm -rf public
+    - mv docs public
 
   # set Zola built output for GitLab Pages
   artifacts:

@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# optimizer input & output: current directory
+# read from the dir 'input'
+#   -> store output to the dir 'output'
+
+GZIP_TARGET_EXTENSIONS=${GZIP_TARGET_EXTENSIONS:-"html css js json svg xml txt"}
+GZIP_COMPRESSION_LEVEL=${GZIP_COMPRESSION_LEVEL:-"9"}
+
+cp -af input/. output/
+
+# build find pattern for target extensions
+find_pattern_str="";
+for ext in $GZIP_TARGET_EXTENSIONS
+do
+  if [ -n "$find_pattern_str" ]
+  then
+    find_pattern_str="$find_pattern_str -o "
+  fi
+  find_pattern_str="$find_pattern_str""-name *.""$ext"
+done
+
+# compress for all gzip target extensions
+if [ -n "$find_pattern_str" ]
+then
+  printf " - Gzip compressing outputs: %s\n" "$GZIP_TARGET_EXTENSIONS" >&2
+  find output \( $find_pattern_str \) \
+       -exec gzip -kf "-${GZIP_COMPRESSION_LEVEL}" {} + >&2 || exit 1
+fi

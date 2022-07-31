@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# optimizer input & output: current directory
+# read from the dir 'input'
+#   -> store output to the dir 'output'
+
+MINIFY_VER=${MINIFY_VER:-"latest"}
+MINIFY_ARGS=${MINIFY_ARGS:+"${MINIFY_ARGS}"}
+
+# determine container command to run
+if podman --version > /dev/null 2>&1
+then
+  CONTAINER_BINNAME=podman
+elif docker --version > /dev/null 2>&1
+then
+  CONTAINER_BINNAME=docker
+else
+  printf "No podman or docker binary found!\n" >&2
+  exit 1
+fi
+
+mv ./input/* ./input/.[!.]* ./input/..?* output/ > /dev/null 2>&1
+"${CONTAINER_BINNAME}" run \
+                       -v ./output:/public \
+                       -t \
+                       \
+                       docker.io/tdewolff/minify:"${MINIFY_VER}" \
+                       -r /public -o / \
+                       $MINIFY_ARGS

@@ -55,7 +55,7 @@ jobs:
       - name: build
         working-directory: ${{ env.SRC_DIR }}
         run: |
-          rm -rf static/public
+          rm -rf static/docs
           ALPINE_VER="${ALPINE_VER}" \
           ZOLA_VER="${ZOLA_VER}" \
           ZOLA_BASE_URL="${ZOLA_BASE_URL}" \
@@ -64,7 +64,7 @@ jobs:
           NO_MINIFY="${NO_MINIFY}" \
           GZIP_TARGET_EXTENSIONS="${GZIP_TARGET_EXTENSIONS}" \
           GZIP_COMPRESSION_LEVEL="${GZIP_COMPRESSION_LEVEL}" \
-          OUTPUT_DIR="static/public" \
+          OUTPUT_DIR="static/docs" \
           ./build.sh
 
       # upload built artifact
@@ -72,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: pages-artifact
-          path: ${{ env.SRC_DIR }}/static/public
+          path: ${{ env.SRC_DIR }}/static/docs
           retention-days: 1
 
 
@@ -138,14 +138,14 @@ jobs:
           then
             cp -af "${SRC_DIR}/static/." "${PAGES_DIR}/"
           fi
-          rm -rf "${PAGES_DIR}/public"
+          rm -rf "${PAGES_DIR}/docs"
           
       # get built artifact in pages branch
       - name: download built artifact to pages branch
         uses: actions/download-artifact@v3
         with:
           name: pages-artifact
-          path: ${{ env.PAGES_DIR }}/public
+          path: ${{ env.PAGES_DIR }}/docs
 
       # commit built output to pages branch, then push
       - name: push to pages branch
