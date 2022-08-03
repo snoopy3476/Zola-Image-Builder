@@ -36,35 +36,22 @@ fi
 IMG_NAME="${1?Image name to build not given!
 usage: ${0} <img-name> [zola-dir]}"
 shift
-TMP_DIR="$(mktemp -d)"
+OUTPUT_DIR="public"
 
 
 
-if OUTPUT_DIR="$TMP_DIR" ./build.sh "$1" \
+if OUTPUT_DIR="$OUTPUT_DIR" ./build.sh "$1" \
     && printf "\n * Building Webserver Image (THTTPD)...\n" >&2 \
-     && iid=$( if [ -z "$IMG_NAME" ]
-               then
-                 "$CONTAINER_BINNAME" \
-                   build . \
-                   -f Containerfile \
-                   --rm -q \
-                   --build-arg=input_dir="$TMP_DIR" \
-                   ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
-                   ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
-                   ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"}
-               else
-                 "$CONTAINER_BINNAME" \
-                   build . \
-                   -f Containerfile \
-                   -t "$IMG_NAME" \
-                   --rm -q \
-                   --build-arg=input_dir="$TMP_DIR" \
-                   ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
-                   ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
-                   ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"}
-               fi )
+     && iid=$("$CONTAINER_BINNAME" \
+                build . \
+                -f Containerfile \
+                -t "$IMG_NAME" \
+                --rm -q \
+                --build-arg=input_dir="$OUTPUT_DIR" \
+                ${ALPINE_VER:+--build-arg=alpine_ver="$ALPINE_VER"} \
+                ${THTTPD_VER:+--build-arg=thttpd_ver="$THTTPD_VER"} \
+                ${CACHE_MAX_AGE:+--build-arg=cache_max_age="$CACHE_MAX_AGE"})
 then success=true; else success=false; fi
-rm -rf "$TMP_DIR"
 
 printf "%s\n" "$iid"
 

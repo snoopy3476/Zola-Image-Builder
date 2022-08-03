@@ -76,14 +76,16 @@ fi
 
 printf "\n * Building Zola...\n" >&2
 rm -rf "$OUTPUT_DIR"
+TMP_BUILD_DIR="$(mktemp -d)"
 if "$CONTAINER_BINNAME" run --rm -i \
-                        -v .:/build -v "$ZOLA_DIR":/src \
+                        -v "${TMP_BUILD_DIR}":/build -v "$ZOLA_DIR":/src \
                         --workdir /src \
                         \
-                        ghcr.io/getzola/zola:v"${ZOLA_VER}" build -o /build/"${OUTPUT_DIR}" \
-                        ${ZOLA_BASE_URL:+-u} ${ZOLA_BASE_URL:+"${ZOLA_BASE_URL}"} \
-                        >&2
+                        ghcr.io/getzola/zola:v"${ZOLA_VER}" build -o /build/output \
+                        ${ZOLA_BASE_URL:+-u} ${ZOLA_BASE_URL:+"${ZOLA_BASE_URL}"} >&2 \
+     && { mv -f "${TMP_BUILD_DIR}"/output "$OUTPUT_DIR" 2> /dev/null || true ; } ; \
 then success=true; else success=false; fi
+rm -rf "${TMP_BUILD_DIR}"
 
 
 # optimizer pass: optimize for each optimizer script
@@ -98,13 +100,13 @@ if [ "$success" = "true" ] && (
      printf "%s\n" "$OPTIMIZER_LIST" | while read -r opt_script
      do
        printf "\n * Running optimizer pass '%s'...\n" "$(basename "$opt_script")" >&2
-       
+
        if ! "$opt_script" >&2
        then
          printf " *** Optimizer failed: '%s'" "$opt_script"
          exit 1
        fi
-       
+
        rm -rf ./input/* ./input/.[!.]* ./input/..?*
        mv ./output/* ./output/.[!.]* ./output/..?* input/ 2> /dev/null
      done
