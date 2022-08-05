@@ -1,0 +1,19 @@
+# GitLab CI file to deploy '/public' directory to GitLab Pages
+#
+# If you do not use GitLab CI, then you may remove this file.
+
+
+# Deploy to GitLab Pages
+pages:
+  stage: deploy
+  
+  script:
+    - rm -rf public
+    - mv docs public
+
+  # set Zola built output for GitLab Pages
+  artifacts:
+    name: pages-artifact
+    paths:
+      - public
+    expire_in: 1 day
