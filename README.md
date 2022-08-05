@@ -37,13 +37,13 @@
   1. Git clone from this repository.
      - From *GitLab*
        ```shell
-       git clone -b v1.0.1 --single-branch https://gitlab.com/snoopy3476/zola-pages-deployer
+       git clone -b v1.0.2 --single-branch https://gitlab.com/snoopy3476/zola-pages-deployer
        cd zola-pages-deployer
        git switch -c main
        ```
      - From *GitHub*
        ```shell
-       git clone -b v1.0.1 --single-branch https://github.com/snoopy3476/zola-pages-deployer
+       git clone -b v1.0.2 --single-branch https://github.com/snoopy3476/zola-pages-deployer
        cd zola-pages-deployer
        git switch -c main
        ```

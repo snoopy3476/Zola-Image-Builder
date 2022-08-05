@@ -23,6 +23,18 @@ RUN apk add --no-cache thttpd"${thttpd_ver:+~$thttpd_ver}" >&2
 RUN adduser --disabled-password --home /public thttpd-runner
 ARG input_dir="public"
 COPY "${input_dir}" /public
+
+# map zola error page to thttpd error page
+RUN [ ! -e /public/errors ] && \
+    mkdir -p /public/errors && \
+    for f in $(find /public -regex "^/public/[0-9][0-9][0-9]\\.html$") \
+             $(find /public -regex "^/public/[0-9][0-9][0-9]\\.html\\.gz$"); \
+    do \
+      f_base="$(basename "$f")"; \
+      ln -snf ../"$f_base" /public/errors/err"$f_base"; \
+    done
+
+# change files owner to runner
 RUN chown -R thttpd-runner /public >&2
 
 EXPOSE 80
